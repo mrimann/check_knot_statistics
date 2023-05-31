@@ -35,7 +35,9 @@ def main():
     # read yaml file with the raw statistics data
     yaml = YAML()
     statistics_file = parse_arguments()
-    statistics_yaml = yaml.load(open(statistics_file))
+    with open(statistics_file, encoding="utf-8") as file:
+        raw_content = file.read()
+        statistics_yaml = yaml.load(raw_content)
 
     # gather the relevant counters
     zone_count = statistics_yaml.get('server', {}).get('zone-count', 0)
