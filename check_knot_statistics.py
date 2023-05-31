@@ -45,7 +45,9 @@ def main():
     query_count_udp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
     query_count_udp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
 
-    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} query_count_udp6={query_count_udp6}')
+    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} \
+query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} \
+query_count_udp6={query_count_udp6}')
     System.exit(State.OK)
 
 
