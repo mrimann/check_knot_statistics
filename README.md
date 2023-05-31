@@ -6,6 +6,17 @@ Goal of this check script is to read Knot DNS statistics and return it so we can
 
 ## Installation (Icinga2):
 to be written
+Clone this repository into the directory where you have all your other plugins, for Icinga on Ubuntu, this is probably `/usr/lib/nagios/plugins` but could be somewhere else on your system:
+
+	cd /usr/lib/nagios/plugins
+	git clone https://github.com/mrimann/check_knot_statistics.git
+    cd check_knot_statistics
+    pip install -r requirements.txt
+
+After that, you should be able to test the functionality on CLI before adding it to the Monitoring system:
+
+    python3 /usr/lib/nagios/plugins/check_knot_statistics.py -f /var/run/knot/stats.yaml
+
 ## Command Line Options:
 
 | Option | Triggers what?                                                                          | Mandatory? | Default value |
