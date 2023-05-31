@@ -96,8 +96,7 @@ def compare_statistics_values(current, last):
     difference = current - last
     if difference < 0:
         raise InvalidStateDataException('No comparable data, probably service restarted since last run')
-    else:
-        return difference
+    return difference
 
 def parse_arguments():
     '''Parse arguments before running the script'''
