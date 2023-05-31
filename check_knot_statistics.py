@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-#
+'''Check script for Knot DNS statistics'''
+
 # Script to parse the Knot DNS statistics file and return some counters to
 # be able to monitor the smooth operations of a Knot nameserver.
 #
@@ -9,13 +10,15 @@
 #
 # (c) Copyright 2023 by Mario Rimann <mario@rimann.org>
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from enum import Enum
 import sys as System
 from ruamel.yaml import YAML
 
 
 class State(int, Enum):
+    '''Store the possible exit status codes to be used later on.'''
+
     OK = 0
     WARNING = 1
     CRITICAL = 2
@@ -27,10 +30,14 @@ WARNING_USER_THREADHOLD = 90.00
 
 
 def main():
+    '''Main section of the script'''
+
     # read yaml file with the raw statistics data
     yaml = YAML()
     statistics_file = parse_arguments()
-    statistics_yaml = yaml.load(open(statistics_file))
+    with open(statistics_file, encoding="utf-8") as file:
+        raw_content = file.read()
+        statistics_yaml = yaml.load(raw_content)
 
     # gather the relevant counters
     zone_count = statistics_yaml.get('server', {}).get('zone-count', 0)
@@ -40,17 +47,20 @@ def main():
     query_count_udp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
     query_count_udp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
 
-    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} query_count_udp6={query_count_udp6}')
+    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} \
+query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} \
+query_count_udp6={query_count_udp6}')
     System.exit(State.OK)
 
 
 def parse_arguments():
+    '''Parse arguments before running the script'''
+
     parser = ArgumentParser(description='Check script to gather Knot DNS server statistics data.')
     parser.add_argument('-f', action='store', dest="statistics_file", help='Path to the statistics dump file.', required=True)
-    args = parser.parse_args()
     try:
         args = parser.parse_args()
-    except:
+    except ArgumentTypeError:
         System.exit(State.UNKNOWN)
     return args.statistics_file
 
