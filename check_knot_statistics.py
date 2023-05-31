@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-#
+'''Check script for Knot DNS statistics'''
+
 # Script to parse the Knot DNS statistics file and return some counters to
 # be able to monitor the smooth operations of a Knot nameserver.
 #
@@ -16,6 +17,8 @@ from ruamel.yaml import YAML
 
 
 class State(int, Enum):
+    '''Store the possible exit status codes to be used later on.'''
+
     OK = 0
     WARNING = 1
     CRITICAL = 2
@@ -27,6 +30,8 @@ WARNING_USER_THREADHOLD = 90.00
 
 
 def main():
+    '''Main section of the script'''
+
     # read yaml file with the raw statistics data
     yaml = YAML()
     statistics_file = parse_arguments()
@@ -45,6 +50,8 @@ def main():
 
 
 def parse_arguments():
+    '''Parse arguments before running the script'''
+
     parser = ArgumentParser(description='Check script to gather Knot DNS server statistics data.')
     parser.add_argument('-f', action='store', dest="statistics_file", help='Path to the statistics dump file.', required=True)
     args = parser.parse_args()
