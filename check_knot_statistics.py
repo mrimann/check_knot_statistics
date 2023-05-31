@@ -13,8 +13,13 @@
 from argparse import ArgumentParser, ArgumentTypeError
 from enum import Enum
 import sys as System
+import os.path
+import shutil
 from ruamel.yaml import YAML
 
+
+class InvalidStateDataException(Exception):
+    '''Custom Exception class to be thrown in case there is something wrong with the state file.'''
 
 class State(int, Enum):
     '''Store the possible exit status codes to be used later on.'''
@@ -32,26 +37,68 @@ WARNING_USER_THREADHOLD = 90.00
 def main():
     '''Main section of the script'''
 
-    # read yaml file with the raw statistics data
+    # prepare things
     yaml = YAML()
-    statistics_file = parse_arguments()
-    with open(statistics_file, encoding="utf-8") as file:
-        raw_content = file.read()
-        statistics_yaml = yaml.load(raw_content)
+    statistics_file_path = parse_arguments()
+    statistics_file_path_last = statistics_file_path + '_last'
 
-    # gather the relevant counters
-    zone_count = statistics_yaml.get('server', {}).get('zone-count', 0)
-    query_count = statistics_yaml.get('mod-stats', {}).get('server-operation', {}).get('query', 0)
-    query_count_tcp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0)
-    query_count_tcp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0)
-    query_count_udp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
-    query_count_udp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
 
-    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} \
-query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} \
-query_count_udp6={query_count_udp6}')
+    # make sure we have a state-file from last run (and if not, abort and don't render any data)
+    if os.path.isfile(statistics_file_path_last) is False:
+        # create current state file to have it for the next run
+        shutil.copy(statistics_file_path, statistics_file_path_last)
+
+        raise InvalidStateDataException('No comparable data, no state file from last run found. Try again.')
+
+    # read yaml file with the raw statistics data
+    with open(statistics_file_path, encoding="utf-8") as file_current:
+        raw_content_current = file_current.read()
+        statistics_current = yaml.load(raw_content_current)
+    with open(statistics_file_path_last, encoding="utf-8") as file_last:
+        raw_content_last = file_last.read()
+        statistics_last = yaml.load(raw_content_last)
+
+    # create current state file to have it for the next run (do it before reading the numbers and
+    # throwing Exceptions)
+    shutil.copy(statistics_file_path, statistics_file_path_last)
+
+    # gather the relevant current "just in time" values
+    zone_count = statistics_current.get('server', {}).get('zone-count', 0)
+
+    # get / compare the counter values (and handle lower values after a service restart)
+    query_count = compare_statistics_values(
+        statistics_current.get('mod-stats', {}).get('server-operation', {}).get('query', 0),
+        statistics_last.get('mod-stats', {}).get('server-operation', {}).get('query', 0)
+    )
+    query_count_tcp4 = compare_statistics_values(
+        statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0),
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0)
+    )
+    query_count_tcp6 = compare_statistics_values(
+        statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0),
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0)
+    )
+    query_count_udp4 = compare_statistics_values(
+        statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0),
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
+    )
+    query_count_udp6 = compare_statistics_values(
+        statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0),
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
+    )
+
+    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_counter={query_count}c \
+query_counter_tcp4={query_count_tcp4}c query_counter_tcp6={query_count_tcp6}c query_counter_udp4={query_count_udp4}c \
+query_counter_udp6={query_count_udp6}c')
     System.exit(State.OK)
 
+def compare_statistics_values(current, last):
+    '''Compare current vs. last value and return the difference if it is posived, return 0 if not. \
+    This is to overcome the issue of resetted counters upon restart of the Knot DNS service.'''
+    difference = current - last
+    if difference < 0:
+        raise InvalidStateDataException('No comparable data, probably service restarted since last run')
+    return difference
 
 def parse_arguments():
     '''Parse arguments before running the script'''
@@ -68,9 +115,15 @@ def parse_arguments():
 if __name__ == "__main__":
     try:
         main()
+
+    except InvalidStateDataException as ex:
+        # exit with UNKNOWN state
+        print(f'UNKNOWN: Problems with the state-file: {ex}')
+        System.exit(State.UNKNOWN)
+
     # global exception handler to catch *any* Exception, intentionally, and also intentionally disabling the
     # check W0718 from pylint that would complain about the next line of code
-    # pylint: disable=broad-exception-caught
+    # pylint: disable-next=broad-exception-caught
     except Exception as ex:
         print(f'While executing the script the following error occurred: "{ex}"')
         System.exit(State.WARNING)
