@@ -17,6 +17,40 @@ After that, you should be able to test the functionality on CLI before adding it
 
     python3 /usr/lib/nagios/plugins/check_knot_statistics.py -f /var/run/knot/stats.yaml
 
+As the statistics file by default is not world-readable, it's one option to run this check script via sudo permissions (please configure that to your needs), the following example config is built to run the command via sudo.
+
+To add the command check to your Icinga2 installation, first add the following command definition e.g. to `/etc/icinga2/conf.d/commands.conf`:
+
+	# 'check_knot_statistics' command definition
+	object CheckCommand "check_knot_statistics" {
+      import "plugin-check-command"
+      command = [ "/usr/bin/sudo", PluginDir + "/check_knot_statistics.py" ]
+
+      arguments = {
+        "-f" = {
+         required = true
+         value = "$yaml_path$"
+         }
+      }
+    }
+
+Then add a service definition e.g. to `/etc/icinga2/conf.d/services.conf`:
+
+    apply Service "knot_statistics" {
+        import "generic-service"
+        display_name = "Knot DNS Statistics"
+        vars.yaml_path = "/var/run/knot/stats.yaml"
+        check_command = "check_knot_statistics"
+
+        # run on the target server itself
+        command_endpoint = host.name
+
+        assign where host.vars.role == "knot-dns-server-role"
+    }
+
+
+**Please adapt the above snippets to your needs!!!** (and refer to the documentation of your monitoring system for further details).
+
 ## Command Line Options:
 
 | Option | Triggers what?                                                                          | Mandatory? | Default value |
