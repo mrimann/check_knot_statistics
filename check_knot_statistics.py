@@ -10,7 +10,7 @@
 #
 # (c) Copyright 2023 by Mario Rimann <mario@rimann.org>
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from enum import Enum
 import sys as System
 from ruamel.yaml import YAML
@@ -58,10 +58,9 @@ def parse_arguments():
 
     parser = ArgumentParser(description='Check script to gather Knot DNS server statistics data.')
     parser.add_argument('-f', action='store', dest="statistics_file", help='Path to the statistics dump file.', required=True)
-    args = parser.parse_args()
     try:
         args = parser.parse_args()
-    except:
+    except ArgumentTypeError:
         System.exit(State.UNKNOWN)
     return args.statistics_file
 
