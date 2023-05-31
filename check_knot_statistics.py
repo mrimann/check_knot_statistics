@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     # global exception handler to catch *any* Exception, intentionally, and also intentionally disabling the
     # check W0718 from pylint that would complain about the next line of code
-    # pylint: disable=broad-exception-caught
+    # pylint: disable-next=broad-exception-caught
     except Exception as ex:
         print(f'While executing the script the following error occurred: "{ex}"')
         System.exit(State.WARNING)
