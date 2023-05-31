@@ -19,7 +19,7 @@ from ruamel.yaml import YAML
 
 
 class InvalidStateDataException(Exception):
-    pass
+    '''Custom Exception class to be thrown in case there is something wrong with the state file.'''
 
 class State(int, Enum):
     '''Store the possible exit status codes to be used later on.'''
@@ -93,6 +93,8 @@ query_counter_udp6={query_count_udp6}c')
     System.exit(State.OK)
 
 def compare_statistics_values(current, last):
+    '''Compare current vs. last value and return the difference if it is posived, return 0 if not. \
+    This is to overcome the issue of resetted counters upon restart of the Knot DNS service.'''
     difference = current - last
     if difference < 0:
         raise InvalidStateDataException('No comparable data, probably service restarted since last run')
