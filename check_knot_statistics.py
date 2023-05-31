@@ -32,20 +32,36 @@ WARNING_USER_THREADHOLD = 90.00
 def main():
     '''Main section of the script'''
 
-    # read yaml file with the raw statistics data
+    # prepare things
     yaml = YAML()
-    statistics_file = parse_arguments()
-    with open(statistics_file, encoding="utf-8") as file:
-        raw_content = file.read()
-        statistics_yaml = yaml.load(raw_content)
+    statistics_file_path = parse_arguments()
+    statistics_file_path_last = statistics_file_path + '_last'
 
-    # gather the relevant counters
-    zone_count = statistics_yaml.get('server', {}).get('zone-count', 0)
-    query_count = statistics_yaml.get('mod-stats', {}).get('server-operation', {}).get('query', 0)
-    query_count_tcp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0)
-    query_count_tcp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0)
-    query_count_udp4 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
-    query_count_udp6 = statistics_yaml.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
+
+    # make sure we have a state-file from last run (and if not, abort and don't render any data)
+    if os.path.isfile(statistics_file_path_last) is False:
+        # create current state file to have it for the next run
+        shutil.copy(statistics_file_path, statistics_file_path_last)
+
+        # exit with UNKNOWN state
+        print(f'UNKNOWN: Knot doing well probably, but seems to have been restarted (no state file around)')
+        System.exit(State.UNKNOWN)
+
+    # read yaml file with the raw statistics data
+    with open(statistics_file_path, encoding="utf-8") as file_current:
+        raw_content_current = file_current.read()
+        statistics_current = yaml.load(raw_content_current)
+    # gather the relevant current "just in time" values
+    zone_count = statistics_current.get('server', {}).get('zone-count', 0)
+
+    # get / compare the counter values (and handle lower values after a service restart)
+    query_count = statistics_current.get('mod-stats', {}).get('server-operation', {}).get('query', 0)
+
+
+    query_count_tcp4 = statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0)
+    query_count_tcp6 = statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0)
+    query_count_udp4 = statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
+    query_count_udp6 = statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
 
     print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_count={query_count} \
 query_count_tcp4={query_count_tcp4} query_count_tcp6={query_count_tcp6} query_count_udp4={query_count_udp4} \
