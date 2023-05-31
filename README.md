@@ -1,5 +1,7 @@
 # check_knot_statistics - Icinga / Nagios Plugin to check Knot DNS statistics
 
+![Pylint](https://github.com/mrimann/check_knot_statistics/actions/workflows/pylint.yml/badge.svg)
+
 Goal of this check script is to read Knot DNS statistics and return it so we can collect some relevant performance data over time and e.g. visualize it via Grafana.
 
 ## Installation (Icinga2):
