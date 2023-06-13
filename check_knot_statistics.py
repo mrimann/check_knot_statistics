@@ -66,47 +66,49 @@ def main():
     # gather the relevant current "just in time" values
     zone_count = statistics_current.get('server', {}).get('zone-count', 0)
 
-    # calculate the time-difference between the two files / states
-    fmt = '%Y-%m-%dT%H:%M:%S+0200'
-    tstamp1 = datetime.strptime(statistics_last.get('time', {}), fmt)
-    tstamp2 = datetime.strptime(statistics_current.get('time', {}), fmt)
-    time_difference_object = tstamp2 - tstamp1
-    seconds_between_states = int(time_difference_object.total_seconds())
-    if seconds_between_states < 1:
-        raise InvalidStateDataException('Time difference between states too short.')
-
-
     # get / compare the counter values (and handle lower values after a service restart)
     query_count = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('server-operation', {}).get('query', 0),
         statistics_last.get('mod-stats', {}).get('server-operation', {}).get('query', 0),
-        seconds_between_states
+        get_time_difference_in_seconds(statistics_last.get('time', {}), statistics_current.get('time', {}))
     )
     query_count_tcp4 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0),
         statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0),
-        seconds_between_states
+        get_time_difference_in_seconds(statistics_last.get('time', {}), statistics_current.get('time', {}))
     )
     query_count_tcp6 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0),
         statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0),
-        seconds_between_states
+        get_time_difference_in_seconds(statistics_last.get('time', {}), statistics_current.get('time', {}))
     )
     query_count_udp4 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0),
         statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0),
-        seconds_between_states
+        get_time_difference_in_seconds(statistics_last.get('time', {}), statistics_current.get('time', {}))
     )
     query_count_udp6 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0),
         statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0),
-        seconds_between_states
+        get_time_difference_in_seconds(statistics_last.get('time', {}), statistics_current.get('time', {}))
     )
 
     print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} queries_per_second={query_count} \
 queries_per_second_tcp4={query_count_tcp4} queries_per_second_tcp6={query_count_tcp6} queries_per_second_udp4={query_count_udp4} \
 queries_per_second_udp6={query_count_udp6}')
     System.exit(State.OK)
+
+def get_time_difference_in_seconds(date_previous, date_last):
+    '''Compare two date/time strings and return the difference between them in seconds.'''
+
+    fmt = '%Y-%m-%dT%H:%M:%S+0200'
+    tstamp1 = datetime.strptime(date_previous, fmt)
+    tstamp2 = datetime.strptime(date_last, fmt)
+    time_difference_object = tstamp2 - tstamp1
+    seconds_between_states = int(time_difference_object.total_seconds())
+    if seconds_between_states < 1:
+        raise InvalidStateDataException('Time difference between states too short.')
+    return seconds_between_states
 
 def compare_statistics_values(current, last, seconds):
     '''Compare current vs. last value and return the difference if it is posived, return 0 if not. \
