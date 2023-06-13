@@ -12,6 +12,7 @@
 
 from argparse import ArgumentParser, ArgumentTypeError
 from enum import Enum
+from datetime import datetime
 import sys as System
 import os.path
 import shutil
@@ -65,40 +66,59 @@ def main():
     # gather the relevant current "just in time" values
     zone_count = statistics_current.get('server', {}).get('zone-count', 0)
 
+    # calculate the time-difference between the two files / states
+    fmt = '%Y-%m-%dT%H:%M:%S+0200'
+    tstamp1 = datetime.strptime(statistics_last.get('time', {}), fmt)
+    tstamp2 = datetime.strptime(statistics_current.get('time', {}), fmt)
+    time_difference_object = tstamp2 - tstamp1
+    seconds_between_states = int(time_difference_object.total_seconds())
+    if seconds_between_states < 1:
+        raise InvalidStateDataException('Time difference between states too short.')
+
+
     # get / compare the counter values (and handle lower values after a service restart)
     query_count = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('server-operation', {}).get('query', 0),
-        statistics_last.get('mod-stats', {}).get('server-operation', {}).get('query', 0)
+        statistics_last.get('mod-stats', {}).get('server-operation', {}).get('query', 0),
+        seconds_between_states
     )
     query_count_tcp4 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0),
-        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0)
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp4', 0),
+        seconds_between_states
     )
     query_count_tcp6 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0),
-        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0)
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('tcp6', 0),
+        seconds_between_states
     )
     query_count_udp4 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0),
-        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0)
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp4', 0),
+        seconds_between_states
     )
     query_count_udp6 = compare_statistics_values(
         statistics_current.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0),
-        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0)
+        statistics_last.get('mod-stats', {}).get('request-protocol', {}).get('udp6', 0),
+        seconds_between_states
     )
 
-    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} query_counter={query_count}c \
-query_counter_tcp4={query_count_tcp4}c query_counter_tcp6={query_count_tcp6}c query_counter_udp4={query_count_udp4}c \
-query_counter_udp6={query_count_udp6}c')
+    print(f'OK: Knot doing well, serving {zone_count} zones | zone_count={zone_count} queries_per_second={query_count} \
+queries_per_second_tcp4={query_count_tcp4} queries_per_second_tcp6={query_count_tcp6} queries_per_second_udp4={query_count_udp4} \
+queries_per_second_udp6={query_count_udp6}')
     System.exit(State.OK)
 
-def compare_statistics_values(current, last):
+def compare_statistics_values(current, last, seconds):
     '''Compare current vs. last value and return the difference if it is posived, return 0 if not. \
     This is to overcome the issue of resetted counters upon restart of the Knot DNS service.'''
     difference = current - last
     if difference < 0:
         raise InvalidStateDataException('No comparable data, probably service restarted since last run')
-    return difference
+
+    # calculate the rate per second
+    rate = round(difference / seconds, 3)
+
+    return rate
 
 def parse_arguments():
     '''Parse arguments before running the script'''
