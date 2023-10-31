@@ -101,7 +101,7 @@ queries_per_second_udp6={query_count_udp6}')
 def get_time_difference_in_seconds(date_previous, date_last):
     '''Compare two date/time strings and return the difference between them in seconds.'''
 
-    fmt = '%Y-%m-%dT%H:%M:%S+0200'
+    fmt = '%Y-%m-%dT%H:%M:%S%z'
     tstamp1 = datetime.strptime(date_previous, fmt)
     tstamp2 = datetime.strptime(date_last, fmt)
     time_difference_object = tstamp2 - tstamp1
